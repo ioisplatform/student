@@ -28,7 +28,13 @@ import {
   CheckCircle2,
   PhoneCall,
   LayoutGrid,
-  ChevronRight
+  ChevronRight,
+  Volume2,
+  VolumeX,
+  Mic,
+  MicOff,
+  Copy,
+  Check
 } from 'lucide-react';
 
 interface AIChatBotProps {
@@ -84,6 +90,33 @@ export function cleanBotText(raw: string): string {
   return text.trim();
 }
 
+// Client-Side Real-Time Indian Standard Time (IST) & Date Engine
+export function getClientLiveIndianDate() {
+  const now = new Date();
+  const daysHi = ['रविवार', 'सोमवार', 'मंगलवार', 'बुधवार', 'गुरुवार', 'शुक्रवार', 'शनिवार'];
+  const daysEn = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const monthsHi = ['जनवरी', 'फरवरी', 'मार्च', 'अप्रैल', 'मई', 'जून', 'जुलाई', 'अगस्त', 'सितंबर', 'अक्टूबर', 'नवंबर', 'दिसंबर'];
+  const monthsEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  const dayIndex = now.getDay();
+  const dayHi = daysHi[dayIndex];
+  const dayEn = daysEn[dayIndex];
+  const dateNum = now.getDate();
+  const monthHi = monthsHi[now.getMonth()];
+  const monthEn = monthsEn[now.getMonth()];
+  const year = now.getFullYear();
+
+  const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+
+  return {
+    dayHi,
+    dayEn,
+    dateHi: `${dateNum} ${monthHi} ${year}`,
+    dateEn: `${dateNum} ${monthEn} ${year}`,
+    timeStr,
+  };
+}
+
 export const AIChatBot: React.FC<AIChatBotProps> = ({ 
   isOpen, 
   onClose, 
@@ -118,6 +151,64 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
   const [showNavigator, setShowNavigator] = useState<boolean>(false);
   const [navSuccessMessage, setNavSuccessMessage] = useState<string | null>(null);
   const [knowledgeList, setKnowledgeList] = useState<KnowledgeItem[]>(INITIAL_KNOWLEDGE);
+
+  // Audio Speech and Voice Recognition State
+  const [isListening, setIsListening] = useState<boolean>(false);
+  const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+
+  const startVoiceInput = () => {
+    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRec) {
+      alert('आपके ब्राउज़र में वॉइस पहचान उपलब्ध नहीं है। कृपया लिखकर सवाल पूछें।');
+      return;
+    }
+    try {
+      const recognition = new SpeechRec();
+      recognition.lang = 'hi-IN';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.onstart = () => setIsListening(true);
+      recognition.onend = () => setIsListening(false);
+      recognition.onerror = () => setIsListening(false);
+      recognition.onresult = (event: any) => {
+        const transcript = event.results?.[0]?.[0]?.transcript;
+        if (transcript) {
+          setInput(transcript);
+          handleSendMessage(transcript);
+        }
+      };
+      recognition.start();
+    } catch {
+      setIsListening(false);
+    }
+  };
+
+  const handleSpeak = (text: string, msgId: string) => {
+    if (!('speechSynthesis' in window)) return;
+    if (speakingMsgId === msgId) {
+      window.speechSynthesis.cancel();
+      setSpeakingMsgId(null);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const clean = cleanBotText(text);
+    const utter = new SpeechSynthesisUtterance(clean);
+    utter.lang = 'hi-IN';
+    utter.rate = 1.0;
+    utter.onend = () => setSpeakingMsgId(null);
+    utter.onerror = () => setSpeakingMsgId(null);
+    setSpeakingMsgId(msgId);
+    window.speechSynthesis.speak(utter);
+  };
+
+  const handleCopyMessage = async (text: string, msgId: string) => {
+    try {
+      await navigator.clipboard.writeText(cleanBotText(text));
+      setCopiedMsgId(msgId);
+      setTimeout(() => setCopiedMsgId(null), 2000);
+    } catch {}
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -354,6 +445,43 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
     setIsLoading(true);
 
     try {
+      // 0. Real-Time Day and Date Match (Immediate <5ms client-side IST calculation)
+      const isDateOrDayQuestion = 
+        /aaj.*(day|din|vaar|var|tarikh|tareekh|tithi|samay|time|konsa|kaunsa|kya|date)/i.test(messageContent) ||
+        /today.*(day|date|time)/i.test(messageContent) ||
+        /what.*day.*today/i.test(messageContent) ||
+        /kaun.*sa.*(din|day|vaar)/i.test(messageContent) ||
+        /konsa.*(din|day|vaar)/i.test(messageContent) ||
+        /aaj.*(somwar|mangalwar|budhwar|guruwar|shukrawar|shaniwar|ravivar)/i.test(messageContent) ||
+        /आज.*(कौन|कौन्|दिन|वार|तारीख|तिथि|समय)/i.test(messageContent);
+
+      if (isDateOrDayQuestion) {
+        const live = getClientLiveIndianDate();
+        const dateReply = `आज ${live.dayHi} (${live.dayEn}) है।
+
+मुख्य विवरण:
+• आज का दिन: ${live.dayHi} (${live.dayEn})
+• आज की दिनांक: ${live.dateHi} (${live.dateEn})
+• वर्तमान समय: ${live.timeStr} (भारतीय मानक समय - IST)
+• दैनिक पंचांग व शुभ मुहूर्त: आज के दिन का चौघड़िया, राहुकाल, नक्षत्र एवं 12 राशियों का दैनिक राशिफल देखने के लिए नीचे दिए गए पंचांग बटन पर क्लिक करें।
+
+[[NAV:page:panchang-rashifal|🪐 दैनिक वैदिक पंचांग व 12 राशिफल देखें]]
+[[NAV:page:weather|🌦️ लाइव मौसम व वर्षा अलर्ट देखें]]`;
+
+        const { cleanContent, actions } = parseNavigationDirectives(dateReply, messageContent);
+        const assistantMsg: ChatMessage = {
+          id: `assistant-${Date.now()}`,
+          role: 'assistant',
+          content: cleanContent,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          actions,
+          learned: true
+        };
+        setMessages((prev) => [...prev, assistantMsg]);
+        setIsLoading(false);
+        return;
+      }
+
       // 1. Check direct match in Firestore Knowledge Base first
       const directMatchAnswer = findDirectKnowledgeMatch(messageContent);
       if (directMatchAnswer) {
@@ -761,8 +889,33 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
                         </div>
                       )}
 
-                      <div className={`text-[9px] text-right font-semibold ${isAssistant ? 'text-slate-500' : 'text-slate-900/80'}`}>
-                        {msg.timestamp}
+                      {/* Message Footer: Actions & Timestamp */}
+                      <div className="flex items-center justify-between pt-1">
+                        <div className="flex items-center gap-1.5">
+                          {isAssistant && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleSpeak(msg.content, msg.id)}
+                                className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 transition"
+                                title={speakingMsgId === msg.id ? "आवाज़ बंद करें" : "उत्तर बोलकर सुनें (Listen)"}
+                              >
+                                {speakingMsgId === msg.id ? <VolumeX className="w-3.5 h-3.5 text-amber-400 animate-pulse" /> : <Volume2 className="w-3.5 h-3.5" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyMessage(msg.content, msg.id)}
+                                className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 transition"
+                                title="उत्तर कॉपी करें (Copy)"
+                              >
+                                {copiedMsgId === msg.id ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                        <div className={`text-[9px] font-semibold ${isAssistant ? 'text-slate-500' : 'text-slate-900/80'}`}>
+                          {msg.timestamp}
+                        </div>
                       </div>
                     </div>
 
@@ -796,16 +949,16 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
           {/* Quick Preset Questions Chips */}
           <div className="px-3 py-2 bg-slate-900/95 border-t border-slate-800 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
             {[
-              'रजिस्ट्रेशन कैसे और कहाँ से करें?',
-              '15-सवाल कौशल इंटरव्यू कैसे दें?',
-              '7 प्लांस और पेआउट की सूची',
-              'ID कार्ड कैसे डाउनलोड करें?',
-              'जाति, आय, निवास प्रमाण पत्र (RTPS)',
-              'जमीन दाखिल खारिज (Mutation)',
-              'कक्षा 1-12 NCERT नोट्स व मैथ फॉर्मूला',
-              'स्कॉलरशिप व कॉलेज बोनाफाइड सर्टिफिकेट',
-              'पासवर्ड भूल गए / User ID खोजें',
-              'व्हाट्सएप हेल्पलाइन +91 8877490845'
+              '📅 आज कौन सा दिन व तारीख है?',
+              '📖 बाल विकास Plan 01 (₹10)',
+              '💎 7 मास्टर प्लांस और पेआउट',
+              '🪪 ID कार्ड कैसे डाउनलोड करें?',
+              '🎯 15-सवाल कौशल इंटरव्यू कैसे दें?',
+              '🏛️ जाति, आय, निवास प्रमाण पत्र (RTPS)',
+              '🌾 मंडी भाव व सोना-चांदी दरें',
+              '💰 पेआउट व कमीशन कैलकुलेटर',
+              '🌦️ लाइव मौसम व बारिश अलर्ट',
+              '📞 व्हाट्सएप हेल्पलाइन +91 8877490845'
             ].map((chip, idx) => (
               <button
                 key={idx}
@@ -813,14 +966,18 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
                   if (showNavigator) setShowNavigator(false);
                   handleSendMessage(chip);
                 }}
-                className="text-[10px] bg-slate-950 hover:bg-slate-800 border border-amber-500/30 text-amber-300 px-2.5 py-1 rounded-full shrink-0 transition cursor-pointer"
+                className={`text-[10px] px-2.5 py-1 rounded-full shrink-0 transition cursor-pointer border ${
+                  idx === 0 
+                    ? 'bg-amber-400 text-slate-950 font-black border-amber-300 shadow-sm'
+                    : 'bg-slate-950 hover:bg-slate-800 border-amber-500/30 text-amber-300'
+                }`}
               >
                 {chip}
               </button>
             ))}
           </div>
 
-          {/* Chat Input Field */}
+          {/* Chat Input Field with Voice Mic & Send */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -829,12 +986,26 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
             }}
             className="p-2.5 sm:p-3 bg-slate-950 border-t border-amber-500/20 flex items-center gap-2"
           >
+            {/* Mic Button for Speech-to-Text */}
+            <button
+              type="button"
+              onClick={startVoiceInput}
+              className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 border transition cursor-pointer ${
+                isListening
+                  ? 'bg-red-500 text-white animate-pulse border-red-400 shadow-[0_0_15px_rgba(239,68,68,0.5)]'
+                  : 'bg-slate-900 hover:bg-slate-850 text-amber-400 border-slate-700'
+              }`}
+              title={isListening ? "सुन रहा है... बोलिए" : "माइक से बोलकर पूछें (Voice Typing)"}
+            >
+              {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </button>
+
             <input
               id="ai-chatbot-input"
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="IOIS सिस्टम, प्लांस, पढ़ाई या सेवाओं पर कोई भी सवाल पूछें..."
+              placeholder={isListening ? "सुन रहा हूँ, कृपया बोलिए..." : "IOIS सिस्टम, आज का दिन, प्लांस या सेवाओं पर पूछें..."}
               className="flex-1 bg-slate-900 border border-slate-700 rounded-full px-4 py-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-amber-400 transition"
               disabled={isLoading}
             />

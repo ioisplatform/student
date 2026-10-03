@@ -29,7 +29,10 @@ import {
   PhoneCall,
   Compass,
   ChevronDown,
-  Grid
+  Grid,
+  Sun,
+  Moon,
+  Palette
 } from 'lucide-react';
 import { IoisServicesDrawerModal } from './IoisServicesDrawerModal';
 
@@ -43,6 +46,9 @@ interface NavbarProps {
   onOpenDashboard?: () => void;
   onOpenIdCard?: () => void;
   onLogout: () => void;
+  currentMode?: 'dark' | 'light';
+  onToggleMode?: () => void;
+  onOpenThemeModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ 
@@ -55,6 +61,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenDashboard,
   onOpenIdCard,
   onLogout,
+  currentMode = 'dark',
+  onToggleMode,
+  onOpenThemeModal,
 }) => {
   const [copied, setCopied] = useState<boolean>(false);
   const [servicesModalOpen, setServicesModalOpen] = useState<boolean>(false);
@@ -202,6 +211,35 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>IOIS सेवाएं</span>
             </button>
 
+            {/* Theme Selector & Dark/Light Toggle Buttons */}
+            {onToggleMode && (
+              <button
+                onClick={onToggleMode}
+                className="p-1.5 sm:px-2 sm:py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 text-slate-200 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1"
+                title={currentMode === 'dark' ? "लाइट मोड पर स्विच करें (Light Mode)" : "डार्क मोड पर स्विच करें (Dark Mode)"}
+                aria-label="Toggle dark/light mode"
+              >
+                {currentMode === 'dark' ? (
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                ) : (
+                  <Moon className="w-3.5 h-3.5 text-indigo-400" />
+                )}
+                <span className="hidden md:inline">{currentMode === 'dark' ? 'लाइट' : 'डार्क'}</span>
+              </button>
+            )}
+
+            {onOpenThemeModal && (
+              <button
+                onClick={onOpenThemeModal}
+                className="p-1.5 sm:px-2.5 sm:py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 text-slate-200 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1"
+                title="कलर थीम व पैलेट चुनें (Theme Colors)"
+                aria-label="Open theme color palette"
+              >
+                <Palette className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden lg:inline">थीम</span>
+              </button>
+            )}
+
             {/* Desktop Only: Share Button */}
             <button
               id="nav-share-btn"
@@ -310,6 +348,31 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {copied ? <Check className="w-4 h-4 text-green-400" /> : <Share2 className="w-4 h-4 text-amber-400" />}
                 <span>{copied ? 'लिंक कॉपी हो गया!' : 'शेयर पोर्टल'}</span>
               </button>
+            </div>
+
+            {/* Mobile Theme Bar */}
+            <div className="grid grid-cols-2 gap-2 p-2 rounded-xl bg-slate-900 border border-slate-800">
+              {onToggleMode && (
+                <button
+                  onClick={onToggleMode}
+                  className="py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
+                >
+                  {currentMode === 'dark' ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-indigo-400" />}
+                  <span>{currentMode === 'dark' ? 'लाइट मोड' : 'डार्क मोड'}</span>
+                </button>
+              )}
+              {onOpenThemeModal && (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenThemeModal();
+                  }}
+                  className="py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer border border-amber-500/20"
+                >
+                  <Palette className="w-3.5 h-3.5 text-amber-400" />
+                  <span>थीम रंग बदलें</span>
+                </button>
+              )}
             </div>
 
             {/* User Session Banner in Mobile Menu */}

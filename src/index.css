@@ -2,25 +2,153 @@
 
 @layer base {
   :root {
-    --bg-dark: #020617;
+    --bg-main: #020617;
     --card-bg: rgba(15, 23, 42, 0.85);
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --border-color: rgba(212, 175, 55, 0.35);
+    --accent-glow: rgba(245, 158, 11, 0.4);
     --saffron: #FF9933;
     --green: #138808;
     --gold: #D4AF37;
     --gold-light: #F3E5AB;
-    --border-glow: rgba(212, 175, 55, 0.4);
+  }
+
+  /* Light Mode Root Overrides */
+  html.light,
+  :root[data-mode="light"] {
+    --bg-main: #f8fafc;
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --border-color: rgba(217, 119, 6, 0.25);
+    --accent-glow: rgba(245, 158, 11, 0.2);
+  }
+
+  /* 1. Theme Presets - Dark Mode */
+  html.dark.theme-royal-gold,
+  :root[data-mode="dark"][data-theme="royal-gold"] {
+    --bg-main: #020617;
+    --border-color: rgba(245, 158, 11, 0.35);
+    --accent-glow: rgba(245, 158, 11, 0.4);
+  }
+
+  html.dark.theme-ocean-blue,
+  :root[data-mode="dark"][data-theme="ocean-blue"] {
+    --bg-main: #071326;
+    --border-color: rgba(56, 189, 248, 0.35);
+    --accent-glow: rgba(56, 189, 248, 0.4);
+  }
+
+  html.dark.theme-emerald-green,
+  :root[data-mode="dark"][data-theme="emerald-green"] {
+    --bg-main: #061a12;
+    --border-color: rgba(16, 185, 129, 0.35);
+    --accent-glow: rgba(16, 185, 129, 0.4);
+  }
+
+  html.dark.theme-crimson-ruby,
+  :root[data-mode="dark"][data-theme="crimson-ruby"] {
+    --bg-main: #180812;
+    --border-color: rgba(244, 63, 94, 0.35);
+    --accent-glow: rgba(244, 63, 94, 0.4);
+  }
+
+  html.dark.theme-amethyst-purple,
+  :root[data-mode="dark"][data-theme="amethyst-purple"] {
+    --bg-main: #120822;
+    --border-color: rgba(168, 85, 247, 0.35);
+    --accent-glow: rgba(168, 85, 247, 0.4);
+  }
+
+  html.dark.theme-midnight-dark,
+  :root[data-mode="dark"][data-theme="midnight-dark"] {
+    --bg-main: #020205;
+    --border-color: rgba(226, 232, 240, 0.25);
+    --accent-glow: rgba(226, 232, 240, 0.2);
+  }
+
+  /* 2. Theme Presets - Light Mode */
+  html.light.theme-royal-gold,
+  :root[data-mode="light"][data-theme="royal-gold"] {
+    --bg-main: #fcfbf7;
+    --border-color: rgba(217, 119, 6, 0.3);
+  }
+
+  html.light.theme-ocean-blue,
+  :root[data-mode="light"][data-theme="ocean-blue"] {
+    --bg-main: #f0f9ff;
+    --border-color: rgba(14, 165, 233, 0.3);
+  }
+
+  html.light.theme-emerald-green,
+  :root[data-mode="light"][data-theme="emerald-green"] {
+    --bg-main: #f0fdf4;
+    --border-color: rgba(16, 185, 129, 0.3);
+  }
+
+  html.light.theme-crimson-ruby,
+  :root[data-mode="light"][data-theme="crimson-ruby"] {
+    --bg-main: #fff1f2;
+    --border-color: rgba(244, 63, 94, 0.3);
+  }
+
+  html.light.theme-amethyst-purple,
+  :root[data-mode="light"][data-theme="amethyst-purple"] {
+    --bg-main: #faf5ff;
+    --border-color: rgba(168, 85, 247, 0.3);
   }
 
   body {
-    background-color: var(--bg-dark);
-    color: #f8fafc;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background-image: 
-      radial-gradient(circle at 50% 0%, rgba(255, 153, 51, 0.1), transparent 50%),
-      radial-gradient(circle at 100% 100%, rgba(19, 136, 8, 0.08), transparent 50%);
-    background-size: 100% 100%;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     overflow-x: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
+}
+
+/* Light mode support classes */
+html.light .glass-card-premium,
+html.light .glass-card-gold {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #0f172a !important;
+  border-color: rgba(217, 119, 6, 0.3) !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08) !important;
+}
+
+html.light header#main-header {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-bottom-color: rgba(217, 119, 6, 0.25) !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06) !important;
+}
+
+html.light .text-slate-100,
+html.light .text-slate-200,
+html.light .text-white {
+  color: #0f172a !important;
+}
+
+html.light .text-slate-300,
+html.light .text-slate-400 {
+  color: #334155 !important;
+}
+
+html.light .bg-slate-950,
+html.light .bg-[#020617],
+html.light .bg-slate-900\/80,
+html.light .bg-slate-900\/90 {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+html.light .bg-slate-900 {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+html.light .border-slate-800,
+html.light .border-slate-700 {
+  border-color: #e2e8f0 !important;
 }
 
 /* Gold Metallic Gradient Text */
@@ -33,19 +161,25 @@
 
 /* Tiranga Text Gradient */
 .tiranga-text {
-  background: linear-gradient(90deg, #FF9933 0%, #FFFFFF 50%, #138808 100%);
+  background: linear-gradient(90deg, #FF9933 0%, #E2E8F0 50%, #138808 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   font-weight: 900;
 }
 
+html.light .tiranga-text {
+  background: linear-gradient(90deg, #ea580c 0%, #0f172a 50%, #15803d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 /* Glass Card Premium */
 .glass-card-premium {
-  background: rgba(15, 23, 42, 0.85);
-  border: 1.5px solid rgba(212, 175, 55, 0.35);
+  background: var(--card-bg);
+  border: 1.5px solid var(--border-color);
   border-radius: 20px;
   backdrop-filter: blur(20px);
-  box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.5);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

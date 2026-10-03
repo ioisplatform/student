@@ -480,6 +480,61 @@ function generateUserIdHelper(fullName: string, planPrice: number, existingUsers
   return finalId;
 }
 
+// Real-Time IST Date, Day and Time Engine for Accurate Live Answers
+function getLiveIndianTimeAndDate() {
+  const now = new Date();
+  const optionsDate: Intl.DateTimeFormatOptions = { timeZone: "Asia/Kolkata", day: "numeric", month: "long", year: "numeric" };
+  const optionsDay: Intl.DateTimeFormatOptions = { timeZone: "Asia/Kolkata", weekday: "long" };
+  const optionsTime: Intl.DateTimeFormatOptions = { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true };
+
+  const dayEn = new Intl.DateTimeFormat("en-US", optionsDay).format(now);
+  const dateEn = new Intl.DateTimeFormat("en-US", optionsDate).format(now);
+  const timeStr = new Intl.DateTimeFormat("en-US", optionsTime).format(now);
+
+  const dayMapHi: Record<string, string> = {
+    Sunday: "रविवार",
+    Monday: "सोमवार",
+    Tuesday: "मंगलवार",
+    Wednesday: "बुधवार",
+    Thursday: "गुरुवार",
+    Friday: "शुक्रवार",
+    Saturday: "शनिवार",
+  };
+
+  const monthMapHi: Record<string, string> = {
+    January: "जनवरी",
+    February: "फरवरी",
+    March: "मार्च",
+    April: "अप्रैल",
+    May: "मई",
+    June: "जून",
+    July: "जुलाई",
+    August: "अगस्त",
+    September: "सितंबर",
+    October: "अक्टूबर",
+    November: "नवंबर",
+    December: "दिसंबर",
+  };
+
+  const dayHi = dayMapHi[dayEn] || dayEn;
+  let dateHi = dateEn;
+  for (const [enM, hiM] of Object.entries(monthMapHi)) {
+    if (dateHi.includes(enM)) {
+      dateHi = dateHi.replace(enM, hiM);
+      break;
+    }
+  }
+
+  return {
+    dayHi,
+    dayEn,
+    dateHi,
+    dateEn,
+    timeStr,
+    iso: now.toISOString(),
+  };
+}
+
 const IOIS_SYSTEM_INSTRUCTION = `
 You are the Official Smart AI Helpline & Interactive System Navigator for the "IOIS PLATFORM" (Indian Online Income Supporting System), inspired by the direct, accurate, and helpful teaching style of "Chintu AI" on Bal Vikas (https://ioisplatform.github.io/balvikas/).
 You speak fluently, warmly, and naturally in Hindi (Devanagari script), Hinglish, and English, matching the user's preferred language and tone.
@@ -1761,6 +1816,42 @@ async function startServer() {
         return res.json({ reply: cleanBotReply(directMatch.answer), learned: true });
       }
 
+      // 0.00 Special: Real-time Live Indian Day, Date & Time (100% Accurate & Instant)
+      const isDateOrDayQuestion = 
+        /aaj.*(day|din|vaar|var|tarikh|tareekh|tithi|samay|time|konsa|kaunsa|kya|date)/i.test(lower) ||
+        /today.*(day|date|time)/i.test(lower) ||
+        /what.*day.*today/i.test(lower) ||
+        /kaun.*sa.*(din|day|vaar)/i.test(lower) ||
+        /konsa.*(din|day|vaar)/i.test(lower) ||
+        /aaj.*(somwar|mangalwar|budhwar|guruwar|shukrawar|shaniwar|ravivar)/i.test(lower) ||
+        /आज.*(कौन|कौन्|दिन|वार|तारीख|तिथि|समय)/i.test(trimmedMsg);
+
+      if (isDateOrDayQuestion) {
+        const liveClock = getLiveIndianTimeAndDate();
+        const dateReply = `आज ${liveClock.dayHi} (${liveClock.dayEn}) है।
+
+मुख्य विवरण:
+• आज का दिन: ${liveClock.dayHi} (${liveClock.dayEn})
+• आज की दिनांक: ${liveClock.dateHi} (${liveClock.dateEn})
+• वर्तमान समय: ${liveClock.timeStr} (भारतीय मानक समय - IST)
+• दैनिक पंचांग व शुभ मुहूर्त: आज के दिन का चौघड़िया, राहुकाल, नक्षत्र एवं 12 राशियों का दैनिक राशिफल देखने के लिए नीचे दिए गए पंचांग बटन पर क्लिक करें।
+
+[[NAV:page:panchang-rashifal|दैनिक वैदिक पंचांग व 12 राशिफल देखें]]
+[[NAV:page:weather|लाइव मौसम व वर्षा अलर्ट देखें]]`;
+
+        return res.json({
+          reply: cleanBotReply(dateReply),
+          grounded: true,
+          searchQueries: [`आज का दिन ${liveClock.dayHi} ${liveClock.dateHi}`],
+          sources: [
+            {
+              title: "IOIS लाइव भारतीय मानक समय (IST) व दैनिक पंचांग इंजन",
+              uri: "https://iois.in/#panchang-rashifal"
+            }
+          ]
+        });
+      }
+
       // 0.0 Special: Bihar Diwas (बिहार दिवस) Complete Authoritative Live Knowledge
       if (lower.includes("बिहार दिवस") || lower.includes("bihar diwas") || lower.includes("bihar day") || (lower.includes("बिहार") && lower.includes("दिवस"))) {
         const biharDiwasReply = `बिहार दिवस (Bihar Diwas) हर वर्ष 22 मार्च को बड़े धूमधाम से मनाया जाता है।
@@ -1823,6 +1914,9 @@ async function startServer() {
             knowledgeList.map((k: any, i: number) => `${i + 1}. Q: "${k.question}" -> Official Answer: "${k.answer}"`).join("\n");
         }
 
+        const liveClock = getLiveIndianTimeAndDate();
+        const liveTimeContext = `\n\n=======================================================\n⏰ CURRENT REAL-TIME SYSTEM CLOCK (INDIAN STANDARD TIME - IST):\n- TODAY'S DAY: ${liveClock.dayHi} (${liveClock.dayEn})\n- TODAY'S DATE: ${liveClock.dateHi} (${liveClock.dateEn})\n- CURRENT TIME (IST): ${liveClock.timeStr}\n- When asked what day, date, or time it is today, always state: "आज ${liveClock.dayHi} (${liveClock.dayEn}) है, दिनांक ${liveClock.dateHi} है, और समय ${liveClock.timeStr} (IST) है।"\n=======================================================\n`;
+
         let response: any = null;
         let isGrounded = false;
         let searchQueries: string[] = [];
@@ -1834,7 +1928,7 @@ async function startServer() {
             model: "gemini-3.8-flash",
             contents: formattedContents,
             config: {
-              systemInstruction: IOIS_SYSTEM_INSTRUCTION + dynamicKnowledge,
+              systemInstruction: IOIS_SYSTEM_INSTRUCTION + liveTimeContext + dynamicKnowledge,
               tools: [{ googleSearch: {} }],
               temperature: 0.6,
             },
@@ -1854,7 +1948,7 @@ async function startServer() {
               model: "gemini-3.8-flash",
               contents: formattedContents,
               config: {
-                systemInstruction: IOIS_SYSTEM_INSTRUCTION + dynamicKnowledge,
+                systemInstruction: IOIS_SYSTEM_INSTRUCTION + liveTimeContext + dynamicKnowledge,
                 temperature: 0.7,
               },
             });

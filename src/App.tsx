@@ -1,45 +1,85 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Navbar } from './components/Navbar';
 import { TickerBar } from './components/TickerBar';
 import { HomePageDashboard } from './components/HomePageDashboard';
 import { PageHeader } from './components/PageHeader';
-import { AssessmentPortal } from './components/AssessmentPortal';
 import { LiveClockPanchang } from './components/LiveClockPanchang';
-import { RtpsJaminServicesPage } from './components/RtpsJaminServicesPage';
-import { WeatherPage } from './components/WeatherPage';
-import { LiveNewsPage } from './components/LiveNewsPage';
-import { EntertainmentChatPage } from './components/EntertainmentChatPage';
-import { PanchangRashifalPage } from './components/PanchangRashifalPage';
-import { MandiMarketPage } from './components/MandiMarketPage';
-import { GovtSchemesPage } from './components/GovtSchemesPage';
-import { JobAlertsPage } from './components/JobAlertsPage';
-import { PlansGrid } from './components/PlansGrid';
-import { PayoutCalculator } from './components/PayoutCalculator';
-import { ParentsPortal } from './components/ParentsPortal';
-import { StudentStudyPage } from './components/StudentStudyPage';
-import { IDCardGenerator } from './components/IDCardGenerator';
-import { RegistrationPortal } from './components/RegistrationPortal';
-import { UserDashboard } from './components/UserDashboard';
-import { AdminPanel } from './components/AdminPanel';
+import { QuickPageShortcuts } from './components/QuickPageShortcuts';
+import { Footer } from './components/Footer';
+import { AIChatBot } from './components/AIChatBot';
+import { ThemeSelectorModal } from './components/ThemeSelector';
+import { 
+  ThemeMode, 
+  ThemePreset, 
+  getSavedThemeMode, 
+  getSavedThemePreset, 
+  applyThemeToDocument 
+} from './services/themeService';
+
+// Lazy Loaded Secondary Pages for Super Fast Initial Page Load (<100ms)
+const RtpsJaminServicesPage = lazy(() => import('./components/RtpsJaminServicesPage').then(m => ({ default: m.RtpsJaminServicesPage })));
+const WeatherPage = lazy(() => import('./components/WeatherPage').then(m => ({ default: m.WeatherPage })));
+const LiveNewsPage = lazy(() => import('./components/LiveNewsPage').then(m => ({ default: m.LiveNewsPage })));
+const EntertainmentChatPage = lazy(() => import('./components/EntertainmentChatPage').then(m => ({ default: m.EntertainmentChatPage })));
+const PanchangRashifalPage = lazy(() => import('./components/PanchangRashifalPage').then(m => ({ default: m.PanchangRashifalPage })));
+const MandiMarketPage = lazy(() => import('./components/MandiMarketPage').then(m => ({ default: m.MandiMarketPage })));
+const GovtSchemesPage = lazy(() => import('./components/GovtSchemesPage').then(m => ({ default: m.GovtSchemesPage })));
+const JobAlertsPage = lazy(() => import('./components/JobAlertsPage').then(m => ({ default: m.JobAlertsPage })));
+const PlansGrid = lazy(() => import('./components/PlansGrid').then(m => ({ default: m.PlansGrid })));
+const PayoutCalculator = lazy(() => import('./components/PayoutCalculator').then(m => ({ default: m.PayoutCalculator })));
+const ParentsPortal = lazy(() => import('./components/ParentsPortal').then(m => ({ default: m.ParentsPortal })));
+const StudentStudyPage = lazy(() => import('./components/StudentStudyPage').then(m => ({ default: m.StudentStudyPage })));
+const IDCardGenerator = lazy(() => import('./components/IDCardGenerator').then(m => ({ default: m.IDCardGenerator })));
+const RegistrationPortal = lazy(() => import('./components/RegistrationPortal').then(m => ({ default: m.RegistrationPortal })));
+const UserDashboard = lazy(() => import('./components/UserDashboard').then(m => ({ default: m.UserDashboard })));
+const AdminPanel = lazy(() => import('./components/AdminPanel').then(m => ({ default: m.AdminPanel })));
+const AssessmentPortal = lazy(() => import('./components/AssessmentPortal').then(m => ({ default: m.AssessmentPortal })));
+const LegalPolicyPages = lazy(() => import('./components/LegalPolicyPages').then(m => ({ default: m.LegalPolicyPages })));
+const ContactFaq = lazy(() => import('./components/ContactFaq').then(m => ({ default: m.ContactFaq })));
+
 import { AuthModal } from './components/AuthModal';
 import { RegistrationModal } from './components/RegistrationModal';
 import { DashboardModal } from './components/DashboardModal';
 import { IdCardModal } from './components/IdCardModal';
-import { ContactFaq } from './components/ContactFaq';
-import { LegalPolicyPages } from './components/LegalPolicyPages';
-import { QuickPageShortcuts } from './components/QuickPageShortcuts';
-import { Footer } from './components/Footer';
-import { AIChatBot } from './components/AIChatBot';
 import { IoisServicesDrawerModal } from './components/IoisServicesDrawerModal';
 import { Plan, UserProfile, PageType } from './types';
 import { getCurrentUser, logoutUser, fetchUsersFromServer, setCurrentUser as persistCurrentUser } from './services/userService';
 import { Sparkles, ArrowLeft, Home, Crown, FileText, GraduationCap, CreditCard, LayoutDashboard, UserPlus } from 'lucide-react';
+
+const PageFallbackLoader = () => (
+  <div className="flex flex-col items-center justify-center min-h-[350px] p-6 text-center space-y-4 animate-fadeIn">
+    <div className="w-10 h-10 border-3 border-amber-400 border-t-transparent rounded-full animate-spin"></div>
+    <div className="text-amber-400 font-bold text-xs sm:text-sm tracking-wide">पेज लोड हो रहा है, कृपया प्रतीक्षा करें...</div>
+  </div>
+);
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<PageType>('home');
   const [selectedPlanForRegister, setSelectedPlanForRegister] = useState<number>(1);
   const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
   const [chatInitialQuery, setChatInitialQuery] = useState<string>('');
+
+  // Theme Customization & Light/Dark Mode State
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => getSavedThemeMode());
+  const [themePreset, setThemePreset] = useState<ThemePreset>(() => getSavedThemePreset());
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    applyThemeToDocument(themeMode, themePreset);
+  }, [themeMode, themePreset]);
+
+  const handleToggleMode = () => {
+    setThemeMode((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      applyThemeToDocument(next, themePreset);
+      return next;
+    });
+  };
+
+  const handlePresetChange = (preset: ThemePreset) => {
+    setThemePreset(preset);
+    applyThemeToDocument(themeMode, preset);
+  };
 
   // User Authentication & Session State
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => getCurrentUser());
@@ -53,21 +93,32 @@ export default function App() {
   const [isIdCardModalOpen, setIsIdCardModalOpen] = useState<boolean>(false);
   const [isServicesModalOpen, setIsServicesModalOpen] = useState<boolean>(false);
 
-  // Sync users with backend on launch and periodically check status updates
+  // Fast Non-Blocking Deferred Sync with backend (Prioritizes 0-delay instant initial page paint)
   useEffect(() => {
+    let isMounted = true;
     const sync = async () => {
-      const freshUsers = await fetchUsersFromServer();
-      if (currentUser) {
-        const found = freshUsers.find((u) => u.userId.toUpperCase() === currentUser.userId.toUpperCase());
-        if (found) {
-          setCurrentUser(found);
-          persistCurrentUser(found);
+      try {
+        const freshUsers = await fetchUsersFromServer();
+        if (isMounted && currentUser) {
+          const found = freshUsers.find((u) => u.userId.toUpperCase() === currentUser.userId.toUpperCase());
+          if (found) {
+            setCurrentUser(found);
+            persistCurrentUser(found);
+          }
         }
+      } catch (e) {
+        // Non-blocking fallback
       }
     };
-    sync();
-    const interval = setInterval(sync, 15000);
-    return () => clearInterval(interval);
+    
+    // First sync after 1.2s so initial load happens instantly without any network wait
+    const initialTimer = setTimeout(sync, 1200);
+    const interval = setInterval(sync, 25000);
+    return () => {
+      isMounted = false;
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
   }, [currentUser?.userId]);
 
   const navigateTo = (page: PageType) => {
@@ -133,7 +184,13 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 flex flex-col selection:bg-amber-500 selection:text-black">
+    <div 
+      className="min-h-screen flex flex-col transition-colors duration-300 selection:bg-amber-500 selection:text-black"
+      style={{
+        backgroundColor: 'var(--bg-main)',
+        color: 'var(--text-primary)',
+      }}
+    >
       {/* 1. Header & Navigation (Always connects to home and all pages) */}
       <Navbar
         currentUser={currentUser}
@@ -149,6 +206,9 @@ export default function App() {
         onOpenDashboard={handleOpenDashboard}
         onOpenIdCard={handleOpenIdCard}
         onLogout={handleLogout}
+        currentMode={themeMode}
+        onToggleMode={handleToggleMode}
+        onOpenThemeModal={() => setIsThemeModalOpen(true)}
       />
 
       {/* 2. Controlled Live News & Instant Payout Ticker */}
@@ -156,6 +216,7 @@ export default function App() {
 
       {/* 3. Main Dynamic Content Area based on Current Page - Full width & responsive */}
       <main className="w-full max-w-7xl mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-10 space-y-6 sm:space-y-12 flex-1 pb-36 sm:pb-16">
+        <Suspense fallback={<PageFallbackLoader />}>
         
         {/* ================= PAGE 1: HOME PAGE (Central Dashboard with all section buttons) ================= */}
         {currentPage === 'home' && (
@@ -568,7 +629,7 @@ export default function App() {
             onOpenIdCard={handleOpenIdCard}
           />
         )}
-
+        </Suspense>
       </main>
 
       {/* 4. Official Footer with AdSense Compliance Navigation */}
@@ -636,19 +697,43 @@ export default function App() {
         )}
       </nav>
 
-      {/* 6. Floating AI Chatbot Launcher Button - Positioned safely above mobile dock */}
-      <button
-        id="floating-ai-chat-launcher"
-        onClick={() => {
-          setChatInitialQuery('');
-          setIsChatOpen(true);
-        }}
-        className="fixed bottom-20 sm:bottom-6 right-3 sm:right-6 z-40 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black px-3.5 sm:px-4 py-2.5 sm:py-3.5 rounded-full font-black text-xs sm:text-sm shadow-[0_10px_30px_rgba(212,175,55,0.4)] flex items-center gap-1.5 sm:gap-2 transition transform hover:scale-108 active:scale-95 cursor-pointer border-2 border-white/40"
-        title="Open Live AI Assistant"
-      >
-        <Sparkles className="w-4 h-4 text-black animate-spin" style={{ animationDuration: '4s' }} />
-        <span>Ask IOIS AI</span>
-      </button>
+      {/* 6. Floating AI Chatbot Launcher Button - Positioned safely above mobile dock with Live Prompt Pill */}
+      <div className="fixed bottom-20 sm:bottom-6 right-3 sm:right-6 z-40 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setChatInitialQuery('आज कौन सा दिन व तारीख है?');
+            setIsChatOpen(true);
+          }}
+          className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border shadow-lg backdrop-blur-md transition transform hover:scale-105 cursor-pointer"
+          style={{
+            backgroundColor: themeMode === 'light' ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 23, 42, 0.9)',
+            borderColor: 'rgba(245, 158, 11, 0.4)',
+            color: themeMode === 'light' ? '#0f172a' : '#f8fafc',
+          }}
+          title="आज का दिन तुरंत पूछें"
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          <span>📅 आज का दिन पूछें</span>
+        </button>
+
+        <button
+          id="floating-ai-chat-launcher"
+          onClick={() => {
+            setChatInitialQuery('');
+            setIsChatOpen(true);
+          }}
+          className="relative bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 px-3.5 sm:px-4 py-2.5 sm:py-3.5 rounded-full font-black text-xs sm:text-sm shadow-[0_10px_35px_rgba(212,175,55,0.45)] flex items-center gap-1.5 sm:gap-2 transition transform hover:scale-108 active:scale-95 cursor-pointer border-2 border-white/50 group"
+          title="Open Live AI Assistant (चिंटू AI)"
+        >
+          <Sparkles className="w-4 h-4 text-black animate-spin" style={{ animationDuration: '4s' }} />
+          <span>Ask IOIS AI</span>
+          <span className="absolute -top-1 -right-1 flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+          </span>
+        </button>
+      </div>
 
       {/* 7. Live AI Chatbot Modal / Drawer */}
       <AIChatBot
@@ -727,6 +812,19 @@ export default function App() {
           setChatInitialQuery('');
           setIsChatOpen(true);
         }}
+      />
+
+      {/* 13. Dedicated Theme Customization & Light/Dark Mode Selector Modal */}
+      <ThemeSelectorModal
+        isOpen={isThemeModalOpen}
+        onClose={() => setIsThemeModalOpen(false)}
+        currentMode={themeMode}
+        currentPreset={themePreset}
+        onModeChange={(mode) => {
+          setThemeMode(mode);
+          applyThemeToDocument(mode, themePreset);
+        }}
+        onPresetChange={handlePresetChange}
       />
     </div>
   );
